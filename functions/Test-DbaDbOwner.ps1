@@ -25,6 +25,9 @@ function Test-DbaDbOwner {
     .PARAMETER TargetLogin
         Specifies the login that you wish check for ownership. This defaults to 'sa' or the sysadmin name if sa was renamed. This must be a valid security principal which exists on the target server.
 
+    .PARAMETER OnlyAccessible
+        If this switch is enabled, only accessible databases are checked
+
     .PARAMETER Detailed
         Will be deprecated in 1.0.0 release.
 
@@ -64,6 +67,7 @@ function Test-DbaDbOwner {
         [Alias("Databases")]
         [object[]]$Database,
         [object[]]$ExcludeDatabase,
+        [switch]$OnlyAccessible,
         [string]$TargetLogin ,
         [Switch]$Detailed,
         [Alias('Silent')]
@@ -74,6 +78,13 @@ function Test-DbaDbOwner {
         Test-DbaDeprecation -DeprecatedOn "1.0.0" -Parameter "Detailed"
     }
     process {
+
+        # Check if OnlyAccessible is set
+        $accessibleFilter = switch ($OnlyAccessible) {
+            $true { @($true) }
+            default { @($true, $false) }
+        }
+
         foreach ($instance in $SqlInstance) {
             try {
                 $server = Connect-SqlInstance -SqlInstance $instance -SqlCredential $sqlcredential
@@ -91,8 +102,9 @@ function Test-DbaDbOwner {
                 Write-Message -Level Verbose -Message "$TargetLogin is not a login on $instance" -Target $instance
             }
         }
-        #use online/available dbs
-        $dbs = $server.Databases | Where-Object IsAccessible
+
+        #use only accessible databases if it is set, otherwise check all databases
+        $dbs = $server.Databases | Where-Object IsAccessible -in $accessibleFilter
 
         #filter database collection based on parameters
         if ($Database) {
@@ -105,11 +117,7 @@ function Test-DbaDbOwner {
 
         #for each database, create custom object for return set.
         foreach ($db in $dbs) {
-
-            if ($db.IsAccessible -eq $false) {
-                Stop-Function -Message "The database $db is not accessible. Skipping database." -Continue -Target $db
-            }
-
+			
             Write-Message -Level Verbose -Message "Checking $db"
             [pscustomobject]@{
                 ComputerName = $server.ComputerName

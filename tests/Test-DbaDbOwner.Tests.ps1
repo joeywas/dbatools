@@ -31,10 +31,10 @@ Describe "$CommandName Unit Tests" -Tag "UnitTests" {
                 - Commands that *do not* include SupportShouldProcess, set defaultParamCount    = 11
                 - Commands that *do* include SupportShouldProcess, set defaultParamCount        = 13
                #>
-        $paramCount = 7
+        $paramCount = 8
         $defaultParamCount = 11
         [object[]]$params = (Get-ChildItem function:\Test-DbaDbOwner).Parameters.Keys
-        $knownParameters = 'SqlInstance', 'SqlCredential', 'Database', 'ExcludeDatabase', 'TargetLogin', 'EnableException', 'Detailed'
+        $knownParameters = 'SqlInstance', 'SqlCredential', 'Database', 'ExcludeDatabase', 'OnlyAccessible', 'TargetLogin', 'EnableException', 'Detailed'
         It "Should contain our specific parameters" {
             ((Compare-Object -ReferenceObject $knownParameters -DifferenceObject $params -IncludeEqual | Where-Object SideIndicator -eq "==").Count) | Should Be $paramCount
         }
